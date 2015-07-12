@@ -108,10 +108,6 @@ class TinyNeuralNetwork{
 				output_out[k] = sigmoid(sum);
 			}
 		}
-		/*
-		 * dSig_alreadyでnanが発生するっぽい
-		 * おそらく、引数に1が入ってinfが一個できたあとにinfが伝達し、dSigalreadyに入って∞/∞でnanが発生
-		*/
 		void BackPropagation(std::vector<double> &teacher_signal){
 			double sum = 0.0;
 
@@ -122,7 +118,6 @@ class TinyNeuralNetwork{
 			delta_output_out.resize(count_unit_out);
 			
 			for (int k = 0; k < count_unit_out; ++k){
-				//teacher_signal[i]の中身は重みの変化分になる
 				delta_output_out[k] = (teacher_signal[k] - output_out[k]) * dSig_already(output_out[k]);
 			}
 
@@ -145,22 +140,5 @@ class TinyNeuralNetwork{
 				}
 				weight_hidden_to_out[count_unit_hidden][k] += alpha * delta_output_out[k] * 1.0;
 			}
-/*
-			for (int j = 0; j < count_unit_hidden; ++j){
-				for (int k = 0; k < count_unit_out; ++k){
-					weight_hidden_to_out[j][k] += alpha * delta_output[k] * output_hidden[j];
-					sum += weight_hidden_to_out[j][k] * delta_output[k];
-				}
-				//sigmoidの一次微分と掛け合わせる
-				learn_signal_out_to_hidden[j] = dSig_already(output_hidden[j]) * sum;
-				printf("%f ", dSig_already(output_hidden[j]));
-			}
-
-			for (int i = 0; i < count_unit_in; ++i){
-				for (int j = 1; j < count_unit_hidden; ++j){
-					weight_in_to_hidden[i][j] += alpha * learn_signal_out_to_hidden[j] * output_in[i];
-				}
-			}
-*/
 		}
 };
