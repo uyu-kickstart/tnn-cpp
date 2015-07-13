@@ -41,11 +41,14 @@ class TinyNeuralNetwork{
 	 * X 		: 入力層
 	 * H 		: 隠れ層
 	 * O 		: 出力層
+	 * 各ユニットの値
 	 * 
 	 * weight 	: 重み
-	 * alpha 	: 学習係数
+	 * alp 		: 学習係数
 	 * 
-	 * count_unit_ : 各層のunit数
+	 * count_X,H,O : 各層のunit数
+	 * 
+	 * i,j,kはそれぞれ入力層、隠れ層、出力層用のループカウンタ
 	*/
 	public:
 		int count_X;
@@ -55,14 +58,9 @@ class TinyNeuralNetwork{
 		std::vector< std::vector<double> > weight_X_to_H;
 		std::vector< std::vector<double> > weight_H_to_O; 
 
-		std::vector<double> X;					//入力するのはここに入れる
+		std::vector<double> X;
 		std::vector<double> H;
 		std::vector<double> O;
-
-		/*
-		 * weight_X_to_H,weight_H_to_O,X,Hにはバイアスの分が入る
-		*/
-
 
 		TinyNeuralNetwork(int unit_in, int unit_hidden, int unit_out, double alpha){
 			count_X = unit_in;
@@ -70,12 +68,17 @@ class TinyNeuralNetwork{
 			count_O = unit_out;
 			alp = alpha;
 
-			int count_X_p1 = count_I + 1;			//weightの数は
+			/*
+			 * 入力層、隠れ層にそれぞれ、入力が常に1のユニットを追加しているため、
+			 * 重みの数は[count_X+1][count_H],[count_H+1][count_O]になる。
+			*/
+			int count_X_p1 = count_X + 1;				//forループの度に+1の計算をするのを省くため
 			weight_X_to_H.resize(count_X_p1);
 			for(int i = 0; i < count_X_p1; ++i){
 				weight_X_to_H[i].resize(count_H);
 			}
-			int count_H_p1 = count_H + 1;
+
+			int count_H_p1 = count_H + 1;				//↑と同じ理由
 			weight_H_to_O.resize(count_H_p1);
 			for(int i = 0; i < count_H_p1; ++i){
 				weight_H_to_O[i].resize(count_O);
@@ -83,14 +86,12 @@ class TinyNeuralNetwork{
 			X.resize(count_X);
 			H.resize(count_H);
 			O.resize(count_O);
-
-			Initialize();
 		}
 
 		void Initialize (){
 			int count_X_p1 = count_X + 1;
 			srand((unsigned)time(NULL));
-			//重み、閾値の初期化。乱数を突っ込む
+			//全ての重み(と閾値)の初期化。乱数を突っ込む
 			for (int i = 0; i < count_X_p1; ++i){
 				for (int j = 0; j < count_H; ++j){
 					weight_X_to_H[i][j] = rand_from0to1();
@@ -104,19 +105,27 @@ class TinyNeuralNetwork{
 			}
 		}
 
+		/*
+		 * 引数にはvectorの先頭のアドレスを渡す
+		*/
 		void ForwardPropagation(std::vector<double> &input){
 			double sum;
+			/* UNCLEAR:
+			 * 参照渡してるから良くない...?
+			 * 中身全コピーも良くない気がする
+			*/
 			X = input;
-			//入力層->隠れ層の伝搬
+
+			//入力層->隠れ層の伝播
 			for (int j = 0; j < count_H; ++j){
 				sum = 0.0;
 				for (int i = 0; i < count_X; ++i){
 					sum += weight_X_to_H[i][j] * X[i];
 				}
-				sum += weight_X_to_H[count_X][j] * 1;
-				H[j] = sigmoid(sum);		//名前によって関数のポインタをさせば？
+				sum += weight_X_to_H[count_X][j] * 1;	//バイアスとして追加したユニットの分
+				H[j] = sigmoid(sum);
 			}
-			//隠れ層->出力層の伝搬
+			//隠れ層->出力層の伝播
 			for (int k = 0; k < count_O; ++k){
 				sum = 0.0;
 				for (int j = 0; j < count_H; ++j){
@@ -138,7 +147,7 @@ class TinyNeuralNetwork{
 			for (int k = 0; k < count_O; ++k){
 				delta_O[k] = (teacher_signal[k] - O[k]) * defferentialSigmoid(O[k]);
 			}
-
+			//入力層->隠れ層の重みの更新
 			for (int j = 0; j < count_H; ++j){
 				sum = 0.0;
 				for (int k = 0; k < count_O; ++k){
@@ -147,16 +156,17 @@ class TinyNeuralNetwork{
 				delta_H[j] = defferentialSigmoid(H[j]) * sum;
 
 				for (int i = 0; i < count_X; ++i){
-					weight_X_to_H[i][j] += alpha * delta_H[j] * X[i];
+					weight_X_to_H[i][j] += alp * delta_H[j] * X[i];
 				}
-				weight_X_to_H[count_X][j] += alpha * delta_H[j] * 1.0;
+				weight_X_to_H[count_X][j] += alp * delta_H[j] * 1.0;
 			}
 
+			//隠れ層->出力層の重みの更新
 			for (int k = 0; k < count_O; ++k){
 				for (int j = 0; j < count_H; ++j){
-					weight_H_to_O[j][k] += alpha * delta_O[k] * H[j];
+					weight_H_to_O[j][k] += alp * delta_O[k] * H[j];
 				}
-				weight_H_to_O[count_H][k] += alpha * delta_O[k] * 1.0;
+				weight_H_to_O[count_H][k] += alp * delta_O[k] * 1.0;
 			}
 		}
 };
